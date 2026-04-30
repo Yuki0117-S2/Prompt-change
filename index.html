@@ -562,6 +562,25 @@
     <div class="output-box" id="outputBox"></div>
   </div>
 
+  <!-- 태그 중복 제거기 -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title">✦ 태그 중복 제거기</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">태그 목록을 붙여넣으면 중복을 제거해줘. 언더스코어↔스페이스는 같은 태그로 처리.</p>
+    <textarea id="dedupInput" placeholder="white_background, masterpiece, best quality, 1boy, blonde hair, blonde_hair, ..." style="min-height:100px;resize:vertical;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:inherit;padding:9px 12px;outline:none;box-sizing:border-box;line-height:1.7;"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <button class="btn btn-primary" onclick="runDedup()" style="flex:1;">✦ 중복 제거</button>
+      <button class="btn btn-secondary" onclick="copyDedup()">복사</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('dedupInput').value='';document.getElementById('dedupOutput').style.display='none';">초기화</button>
+    </div>
+    <div id="dedupOutput" style="display:none;margin-top:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">✦ 결과</span>
+        <span id="dedupStats" style="font-size:11px;color:var(--text-muted);"></span>
+      </div>
+      <div id="dedupResult" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:12px;line-height:1.9;color:var(--text);word-break:break-all;font-family:'Consolas','D2Coding',monospace;white-space:pre-wrap;"></div>
+    </div>
+  </div>
+
   <!-- 키워드 사전 편집 -->
   <div class="card" style="margin-top:14px;">
     <div class="collapsible-header" onclick="toggleDict(this)">
@@ -1219,6 +1238,49 @@ function gistDisconnect() {
 
 // 시작 시 토큰/ID 복원
 if (gistToken) { document.getElementById('gistToken').value = gistToken; gistDot('on'); }
+
+
+// ─────────────────────────────
+//  태그 중복 제거기
+// ─────────────────────────────
+function normalizeTag(t) {
+  return t.replace(/_/g, ' ').toLowerCase().trim();
+}
+
+function runDedup() {
+  const raw = document.getElementById('dedupInput').value.trim();
+  if (!raw) return;
+
+  // 쉼표 구분으로 파싱, 각 태그 트림
+  const tags = raw.split(',').map(t => t.trim()).filter(t => t.length > 0);
+  const seen = new Map(); // normalizedKey -> first original tag
+  const result = [];
+  let dupeCount = 0;
+
+  tags.forEach(tag => {
+    const key = normalizeTag(tag);
+    if (!seen.has(key)) {
+      seen.set(key, tag);
+      result.push(tag);
+    } else {
+      dupeCount++;
+    }
+  });
+
+  document.getElementById('dedupResult').textContent = result.join(', ');
+  document.getElementById('dedupStats').textContent = `${tags.length}개 → ${result.length}개 (${dupeCount}개 제거)`;
+  document.getElementById('dedupOutput').style.display = 'block';
+}
+
+function copyDedup() {
+  const text = document.getElementById('dedupResult').textContent;
+  if (!text) { alert('먼저 중복 제거를 실행해줘!'); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  });
+}
 
 </script>
 </body>
