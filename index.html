@@ -483,6 +483,7 @@
         <div class="field">
           <label>아트 스타일</label>
           <select id="artStyle">
+            <option value="">없음</option>
             <option value="anime art style, soft lighting">애니메이션</option>
             <option value="digital painting, cinematic lighting">디지털 페인팅</option>
             <option value="realistic, photorealistic, detailed">사실적</option>
@@ -778,15 +779,13 @@ function parseInput(text) {
 }
 
 function processText(text, section, result) {
-  if (!isSectionActive(section)) return;
-
-  // 긴 키워드 먼저 매칭
+  // 긴 키워드 먼저 매칭 (섹션 헤더 없어도 사전 전체에서 매칭)
   const sortedKeys = Object.keys(DICT).sort((a, b) => b.length - a.length);
   let remaining = text;
   const matched = new Set();
 
   for (const key of sortedKeys) {
-    if (remaining.includes(key) && DICT[key].section === section) {
+    if (remaining.includes(key)) {
       matched.add(key);
       remaining = remaining.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '');
     }
@@ -795,14 +794,15 @@ function processText(text, section, result) {
   // 매칭된 키워드 순서대로 추가
   sortedKeys.forEach(key => {
     if (matched.has(key)) {
-      result.push({ en: DICT[key].en, section });
+      const dictSection = DICT[key].section || section;
+      if (!isSectionActive(dictSection)) return;
+      result.push({ en: DICT[key].en, section: dictSection });
     }
   });
 
   // 매칭 안 된 남은 조각도 추가 (한글 그대로)
   const leftover = remaining.split(/[,，、·\s\[\]\(\)]+/).map(s => s.trim()).filter(s => s.length > 1 && !/^[\-\*\#\d\.]+$/.test(s));
   leftover.forEach(w => {
-    if (!isSectionActive(section)) return;
     result.push({ en: w, section });
   });
 }
@@ -852,7 +852,7 @@ async function convertPrompt() {
     tagMeta.push({ label: lbl, cls });
   });
   if (bgTag) { allParts.push(bgTag); tagMeta.push({ label: '배경', cls: 'tag-quality' }); }
-  allParts.push(artStyle); tagMeta.push({ label: '스타일', cls: 'tag-style' });
+  if (artStyle) { allParts.push(artStyle); tagMeta.push({ label: '스타일', cls: 'tag-style' }); }
 
   const sep = format === 'comma' ? ', ' : ', ';
   const finalPrompt = allParts.map(p => formatTag(p, format)).join(sep);
