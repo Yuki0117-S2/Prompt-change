@@ -603,6 +603,10 @@
               <button class="btn-json btn-json-export" onclick="toggleShowToken()" id="showTokenBtn" style="white-space:nowrap;padding:8px 10px;">보기</button>
             </div>
           </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Gist ID <span style="font-weight:400;color:var(--text-muted);">— 기존 Gist 연결 시 입력, 비우면 새로 생성</span></label>
+            <input type="text" id="gistIdInput" placeholder="a1b2c3d4e5f6... (gist.github.com/유저명/ 뒤 문자열)" autocomplete="off" style="font-family:'Consolas','D2Coding',monospace;font-size:12px;">
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn-json btn-json-import" onclick="gistConnect()">연결 / Gist 생성</button>
             <button class="btn-json btn-json-merge"  onclick="gistPull()">Gist에서 불러오기</button>
@@ -1177,14 +1181,23 @@ async function gistConnect() {
   if (!token) { gistMsg('토큰을 입력해줘!', 'err'); return; }
   gistDot('busy'); gistMsg('연결 중...', 'ok');
 
+  // 입력란에 ID 있으면 우선 사용
+  const inputId = document.getElementById('gistIdInput').value.trim();
+  if (inputId) gistId = inputId;
+
   try {
     if (gistId) {
       // 기존 Gist 확인
       const r = await fetch('https://api.github.com/gists/' + gistId, { headers: gistHeaders(token) });
       if (r.ok) {
         gistToken = token; localStorage.setItem(GIST_LS_TOKEN, token); localStorage.setItem(GIST_LS_ID, gistId);
+        document.getElementById('gistIdInput').value = gistId;
         gistDot('on'); gistMsg('✓ 기존 Gist 연결 완료! Gist ID: ' + gistId, 'ok');
         await gistPull(true); return;
+      } else {
+        gistId = '';
+        gistMsg('Gist ID를 찾을 수 없어. ID 확인해줘.', 'err');
+        gistDot('err'); return;
       }
     }
     // 새 Gist 생성
@@ -1233,11 +1246,13 @@ function gistDisconnect() {
   gistId = ''; gistToken = '';
   localStorage.removeItem(GIST_LS_TOKEN); localStorage.removeItem(GIST_LS_ID);
   document.getElementById('gistToken').value = '';
+  document.getElementById('gistIdInput').value = '';
   gistDot('off'); gistMsg('연동 해제 완료', 'ok');
 }
 
 // 시작 시 토큰/ID 복원
 if (gistToken) { document.getElementById('gistToken').value = gistToken; gistDot('on'); }
+if (gistId) { document.getElementById('gistIdInput').value = gistId; }
 
 
 // ─────────────────────────────
